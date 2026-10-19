@@ -1,0 +1,36 @@
+/* Reference-inspired navy instrument panels, with no decorative page chrome. */
+header[data-testid="stHeader"], footer { display: none; }
+.block-container { max-width: 1600px; padding: 1.5rem 2rem 2rem; }
+.stApp { background: #101827; }
+.identity { display: flex; align-items: center; gap: 24px; min-height: 40px; }
+.brand { font-size: 20px; font-weight: 650; letter-spacing: -.5px; }
+.brand:first-letter { color: #4ecbdc; }
+.connection { font: 11px ui-monospace, monospace; letter-spacing: .3px; }
+.connected { color: #53c89b; } .disconnected { color: #eab65c; }
+[data-testid="stTabs"] [role="tablist"] { gap: 28px; border-bottom: 1px solid #26354a; }
+[data-testid="stTabs"] [role="tab"] { font-size: 13px; }
+[data-testid="stVerticalBlockBorderWrapper"] { border-color: #26354a !important; }
+[data-testid="stForm"] { padding: 0; }
+[data-testid="stCaptionContainer"] { color: #8fa1ba; font-size: 11px; }
+input, textarea { font-family: ui-monospace, monospace !important; font-size: 12px !important; }
+.verdict { text-align: center; font-size: 20px; font-weight: 600; margin: -12px 0 12px; }
+.muted { color: #8fa1ba; }
+.empty-signals { min-height: 310px; display: flex; flex-direction: column;
+  justify-content: center; color: #a1b1c7; font-size: 15px; }
+.empty-signals small { color: #8092ab; font-size: 12px; margin-top: 8px; }
+.signal { padding: 10px 0; border-top: 1px solid #26354a; }
+.signal span { color: #dbe6f3; font: 12px ui-monospace, monospace; }
+.signal small { display: block; color: #8fa1ba; font-size: 11px; line-height: 1.6; margin-top: 4px; }
+.email-preview { background: #111c2d; border: 1px solid #26354a; border-radius: 6px;
+  padding: 18px; max-height: 360px; overflow: auto; white-space: pre-wrap;
+  overflow-wrap: anywhere; font: 13px/1.9 ui-monospace, monospace; }
+mark { color: inherit; padding: 2px 0; border-radius: 2px; }
+.risk-up { background: #f2748333; border-bottom: 1px solid #f27483; }
+.risk-down { background: #4ecbdc26; border-bottom: 1px solid #4ecbdc; }
+.risk-neutral { background: #8092ab33; }
+@media (max-width: 760px) {
+  .block-container { padding: 1rem; }
+  .identity { gap: 12px; flex-wrap: wrap; }
+  [data-testid="stHorizontalBlock"] { flex-wrap: wrap; }
+  [data-testid="stColumn"] { min-width: min(100%, 340px) !important; flex: 1 1 340px; }
+}
