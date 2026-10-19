@@ -1,6 +1,6 @@
-# Stages 1–6 verification
+# Stages 1–7 verification
 
-Verified through Stage 6 locally on 2026-10-19. Stage 7 remains pending.
+Verified through Stage 7 locally on 2026-10-19. Model-quality improvements remain separate work.
 
 | Stage | Verified deliverables |
 | --- | --- |
@@ -10,10 +10,11 @@ Verified through Stage 6 locally on 2026-10-19. Stage 7 remains pending.
 | 4 — Online URLs | Registered-domain-only DNS/WHOIS; public-address screening; SQLite TTL/negative cache; global lease/concurrency/rate limits; hard worker deadlines; resumable bounded collection; file-only extended-model training; 30-feature SHAP; predictor/scoring with explicit offline fallback |
 | 5 — API | FastAPI lifespan model loading; health/version/experimental metadata; typed URL/email endpoints; cleaned-text highlights; byte/character limits; per-client rate limiting; private error handling; structured request logs; TestClient coverage |
 | 6 — Dashboard | Reference-inspired navy/cyan Streamlit layout; URL/email forms; HTTPX API boundary; radial risk chart; signed feature chart and reasons; escaped overlapping email highlights; availability, loading, error and fallback states; responsive layout |
+| 7 — Polish | Public-function annotation/docstring audit; full architecture diagram; canonical app entry point and Make alias; isolated clean-checkout install and command verification; compatible TestClient dependencies; warning-free regression checks |
 
 Checks completed:
 
-- `python -m pytest -q --tb=short`: **135 passed** (all test DNS/WHOIS calls mocked).
+- `python -m pytest -q -W error --tb=short`: **135 passed, no warnings** (all test DNS/WHOIS calls mocked).
 - `python -m ruff check .`: clean.
 - `python -m ruff format --check .`: clean.
 - URL and email artifacts load and match their current training CSV hashes.
@@ -57,8 +58,8 @@ window expiry, generic internal errors and log privacy. Saved-model TestClient
 verification returned a 29/100 legitimate URL prediction and a 3/100 legitimate
 email prediction; an injected timeout matched offline probability, model version
 and feature contributions exactly. No external lookups were used in that check.
-Evidence is in `artifacts/stage5_verification.json`. Installed Starlette emits a
-TestClient HTTPX deprecation warning; all tests pass with the permitted HTTPX stack.
+Evidence is in `artifacts/stage5_verification.json`. The TestClient dependency
+warning observed during Stage 5 was resolved in Stage 7 using compatibility bounds.
 The real Uvicorn localhost smoke check also passed health, prediction and OpenAPI
 requests (200) and unsafe-online-target rejection (422). The temporary server was
 stopped after verification. Ruff lint and formatting checks pass across 44 files.
@@ -73,3 +74,36 @@ overflow. Temporary servers were stopped. Screenshots and the browser report are
 saved locally under `artifacts/dashboard_*.png` and `stage6_verification.json`.
 Ruff lint and formatting pass across 49 Python files. Browser tooling is used
 only for verification and is not an application dependency.
+
+Stage 7 verification:
+
+- AST audit: 88 public application functions/methods, including constructors,
+  callbacks and endpoint helpers, have parameter/return annotations and docstrings.
+  Tests and ignored verification scripts are outside this application-code audit.
+- Dashboard moved to `app/streamlit_app.py`, with HTTP/chart/style helpers in
+  `app/`. `make app` is canonical and `make dashboard` remains an alias. The root
+  theme location is documented because Streamlit discovers it from the launch directory.
+- README architecture covers offline/online URL and email training, calibration,
+  artifacts, API, dashboard, explanations, SQLite cache and offline fallback.
+- Starlette `0.52.1` and AnyIO `4.14.2` preserve the permitted HTTPX stack without
+  warning suppression or adding HTTPX2. Both are constrained existing FastAPI
+  dependencies. `pip check` passes; pytest passes with all warnings treated as errors.
+- A fresh local Git clone with the current source changes applied contained no
+  datasets, cache, artifacts or virtual environment. A new independent virtual
+  environment successfully installed `.[dev]`; all 135 tests, lint and formatting
+  checks passed there. The resolved FastAPI version was `0.147.0`; the working
+  environment also passed on `0.146.0` with the same Starlette/AnyIO bounds.
+- Documented preparation and all three training commands ran against synthetic
+  source CSVs and a frozen synthetic online snapshot. All three artifacts were
+  created in that disposable checkout. Offline prediction and SHAP CLI commands,
+  entry-point help, theme configuration, missing-model 503 behavior, URL/email
+  HTTP predictions and both server startup checks passed. No live DNS/WHOIS
+  acquisition or historical-baseline audit was run; acquisition/audit help was checked.
+- GNU Make is unavailable on this Windows host; documented direct Python command
+  equivalents were executed. The Make targets and dashboard alias were reviewed.
+- Existing datasets and trained artifacts were preserved. Temporary servers were
+  stopped and the disposable checkout/environment removed after verification.
+
+Local evidence: `artifacts/stage7_verification.json` and `stage7_checkout.log`.
+The verification used synthetic data to check installation and command wiring;
+it provides no new evidence of real-world detection quality.

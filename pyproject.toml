@@ -13,6 +13,10 @@ dependencies = [
   "shap>=0.49,<0.52",
   "dnspython>=2.6,<3", "python-whois>=0.9.5,<0.10",
   "fastapi>=0.115,<1", "uvicorn>=0.34,<1", "pydantic>=2.10,<3",
+  # Keep TestClient on the permitted HTTPX stack; Starlette 1.x migrates to HTTPX2.
+  "starlette>=0.49.1,<1",
+  # Match Starlette's pre-HTTPX2 API before AnyIO's deprecated namespace aliases.
+  "anyio>=4.8,<4.15",
   "streamlit>=1.50,<2", "httpx>=0.28,<1", "plotly>=5.24,<7",
 ]
 

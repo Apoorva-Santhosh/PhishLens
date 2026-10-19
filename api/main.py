@@ -36,6 +36,7 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        """Share one artifact load and inference lock across this server process."""
         app.state.predictor = None
         app.state.inference_lock = asyncio.Lock()
         try:
@@ -55,6 +56,7 @@ def create_app(
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request: Request, exc: RequestValidationError) -> JSONResponse:
+        """Expose validation categories without echoing private request values."""
         # Pydantic's default errors include input values, including entire email bodies.
         return JSONResponse(
             status_code=422,
@@ -74,6 +76,7 @@ def create_app(
         )
 
     def predictor() -> Predictor:
+        """Return the startup-loaded predictor or an explicit availability error."""
         result = getattr(app.state, "predictor", None)
         if result is None:
             raise HTTPException(503, "Models unavailable; check trusted local artifacts")
@@ -81,6 +84,7 @@ def create_app(
 
     @app.get("/health", response_model=HealthResponse)
     async def health() -> JSONResponse:
+        """Report availability separately from the online pilot's experimental status."""
         loaded = getattr(app.state, "predictor", None)
         models = {}
         for name, attribute in [
@@ -104,6 +108,7 @@ def create_app(
         return JSONResponse(result.model_dump(), status_code=503 if loaded is None else 200)
 
     async def predict(method: Callable[..., Prediction], *args: str) -> PredictionResponse:
+        """Keep blocking inference off the event loop and hide internal error details."""
         # Serial inference bounds memory and protects lazily initialized explainers.
         # The event loop remains free for health checks while CPU/WHOIS work runs.
         async with app.state.inference_lock:
@@ -120,6 +125,7 @@ def create_app(
 
     @app.post("/predict/url", response_model=PredictionResponse)
     async def predict_url(body: URLRequest) -> PredictionResponse:
+        """Reject unsafe online targets before any DNS/WHOIS or model work."""
         if body.mode == "online":
             try:
                 safe_domain(body.url)
@@ -129,6 +135,7 @@ def create_app(
 
     @app.post("/predict/email", response_model=PredictionResponse)
     async def predict_email(body: EmailRequest) -> PredictionResponse:
+        """Serve email scoring and cleaned-text explanations from the loaded pipeline."""
         model = predictor()
         if model.email is None:
             raise HTTPException(503, "Email model unavailable")

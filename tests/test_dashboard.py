@@ -8,8 +8,8 @@ import httpx
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from dashboard import client
-from dashboard.visuals import feature_chart, highlighted_text, risk_chart
+from app import client
+from app.visuals import feature_chart, highlighted_text, risk_chart
 from phishlens.schemas import HealthResponse, PredictionResponse
 
 
@@ -132,7 +132,10 @@ def button(app, label):
 def test_streamlit_empty_submit_success_clear_and_error(connected, monkeypatch, prediction):
     analyze = Mock(return_value=prediction)
     monkeypatch.setattr(client, "analyze", analyze)
-    app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "dashboard" / "app.py")).run()
+    app = AppTest.from_file(
+        str(Path(__file__).resolve().parents[1] / "app" / "streamlit_app.py"),
+        default_timeout=15,
+    ).run()
     assert not app.exception
     assert len(app.tabs) == 2
     button(app, "Analyze URL").click().run()
@@ -153,13 +156,19 @@ def test_streamlit_empty_submit_success_clear_and_error(connected, monkeypatch, 
 
 def test_streamlit_email_and_offline_api(connected, monkeypatch, prediction):
     monkeypatch.setattr(client, "analyze", Mock(return_value=prediction))
-    app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "dashboard" / "app.py")).run()
+    app = AppTest.from_file(
+        str(Path(__file__).resolve().parents[1] / "app" / "streamlit_app.py"),
+        default_timeout=15,
+    ).run()
     app.text_area[0].set_value("verify account")
     button(app, "Analyze email").click().run()
     assert not app.exception
     assert app.session_state["email_result"] == prediction
     monkeypatch.setattr(client, "health", Mock(side_effect=client.APIError("offline")))
-    app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "dashboard" / "app.py")).run()
+    app = AppTest.from_file(
+        str(Path(__file__).resolve().parents[1] / "app" / "streamlit_app.py"),
+        default_timeout=15,
+    ).run()
     assert not app.exception
     assert button(app, "Analyze URL").disabled
     assert button(app, "Analyze email").disabled

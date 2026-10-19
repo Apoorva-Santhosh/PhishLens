@@ -1,4 +1,4 @@
-"""Streamlit interface: python -m streamlit run dashboard/app.py."""
+"""Streamlit interface: python -m streamlit run app/streamlit_app.py."""
 
 import sys
 from html import escape
@@ -9,13 +9,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import streamlit as st
 
-from dashboard import client
-from dashboard.visuals import COLORS, feature_chart, highlighted_text, risk_chart
+from app import client
+from app.visuals import COLORS, feature_chart, highlighted_text, risk_chart
 from phishlens.config import MAX_EMAIL_LENGTH, MAX_URL_LENGTH
 from phishlens.schemas import PredictionResponse
 
 
 def show_result(result: PredictionResponse | None, kind: str) -> None:
+    """Show API evidence or an honest empty state without generating sample metrics."""
     center, detail = st.columns([1.15, 1], gap="large")
     with center:
         st.caption("RISK ASSESSMENT")
@@ -83,6 +84,7 @@ def show_result(result: PredictionResponse | None, kind: str) -> None:
 
 
 def analysis_tab(kind: str, available: bool) -> None:
+    """Keep form inputs and results isolated per analysis type in this session."""
     inputs, output = st.columns([0.78, 2], gap="large")
     with inputs:
         st.caption("ANALYSIS INPUT")
@@ -132,6 +134,7 @@ def analysis_tab(kind: str, available: bool) -> None:
 
 
 def main() -> None:
+    """Render the compact dashboard and gate analysis on API model availability."""
     st.set_page_config(page_title="PhishLens", page_icon="◈", layout="wide")
     st.markdown(
         "<style>" + Path(__file__).with_name("style.css").read_text() + "</style>",

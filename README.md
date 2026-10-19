@@ -1,7 +1,7 @@
 # PhishLens
 
 Explainable URL and email phishing detection with CPU-only classical ML.
-**Stages 1–6 implemented:** local data preparation, offline URL classification and SHAP,
+**Stages 1–7 implemented:** local data preparation, offline URL classification and SHAP,
 plus calibrated TF-IDF/logistic email classification with exact term explanations.
 URL/email models and an experimental online URL pilot are registered locally.
 Stage 4 adds bounded, cached domain metadata and explicit offline fallback.
@@ -9,13 +9,35 @@ Stage 5 exposes predictions through FastAPI. Stage 6 adds a local Streamlit dash
 
 ```mermaid
 flowchart LR
-    CSV[Local labeled CSV] --> Validate[Validate and deduplicate]
-    Validate --> Split[Split by registered domain]
-    Split --> Fit[Fit LR / Random Forest / XGBoost]
-    Fit --> Calibrate[Independent sigmoid calibration]
-    Calibrate --> Select[Validation AUC then recall]
-    Select --> Test[One held-out test evaluation]
-    Test --> Registry[Joblib artifact and report]
+    subgraph Training[File-only training]
+        URLs[Labeled URL CSV] --> URLSplit[Validate / deduplicate / domain-disjoint splits]
+        URLSplit --> Offline[23 lexical features / LR, forest, XGBoost]
+        Snapshot[Frozen DNS and WHOIS CSV] --> Online[30 extended features / separate URL model]
+        URLSplit --> Online
+        Emails[Labeled email CSV] --> EmailSplit[Clean / token-deduplicate / document splits]
+        EmailSplit --> Email[TF-IDF and logistic regression]
+        Offline --> Select[Independent calibration / validation selection / held-out test]
+        Online --> Select
+        Email --> Select
+        Select --> Registry[Three trusted artifacts / metadata / reports]
+    end
+    Collector[Slow resumable public-domain collection] --> Snapshot
+    subgraph Inference[Prediction and explanation]
+        UI[Streamlit dashboard] -->|HTTPX| API[FastAPI / validation / rate limits]
+        API --> Predictor[Startup-loaded Predictor]
+        Registry --> Predictor
+        Predictor --> Lexical[Offline URL features]
+        Predictor --> Text[Email pipeline and exact term contributions]
+        Predictor -->|Online URL mode only| Cache[SQLite TTL and failure backoff]
+        Cache -->|Cache miss / bounded worker| Lookups[Registered-domain DNS and WHOIS only]
+        Lookups -->|Complete metadata| Extended[Extended URL features]
+        Lookups -->|Failure or timeout| Lexical
+        Lexical --> Explain[URL SHAP / calibrated score / model identity]
+        Extended --> Explain
+        Explain --> API
+        Text --> API
+        API -->|Risk / reasons / cleaned-text highlights| UI
+    end
 ```
 
 Python 3.11+ is required. From the repository root:
@@ -27,6 +49,9 @@ python -m venv .venv
 python -m pip install -e '.[dev]'
 python -m pytest
 python -m ruff check .
+python -m ruff format --check .
+# Download the documented datasets before running the following commands.
+python -m phishlens.models.prepare_url
 python -m phishlens.models.train_url --data data/urls.csv --output artifacts
 python -m phishlens.models.prepare_email
 python -m phishlens.models.train_email --data data/emails.csv --output artifacts
@@ -35,6 +60,10 @@ python -m phishlens.models.train_email --data data/emails.csv --output artifacts
 See [dataset instructions](data/README.md) before training. `make setup`,
 `make train`, `make test` and `make lint` provide equivalent commands where GNU
 Make is installed. Use direct Python commands on Windows if Make is unavailable.
+A fresh checkout contains no datasets, SQLite cache, or trained artifacts. Tests
+use synthetic fixtures and mocked lookups, so they run before downloading data.
+Prepare the URL and email CSVs before `make train-offline`; `make train` additionally
+requires the online snapshot described below. No training command downloads data.
 
 Training writes `artifacts/url_offline.joblib`, a readable metadata JSON and
 `url_report.md` with validation comparisons, selected model rationale, final test
@@ -54,8 +83,8 @@ See [LEARNING](docs/LEARNING.md) and [MODEL_CARD](docs/MODEL_CARD.md).
 Start the API as below, then open a second terminal in the repository root:
 
 ```sh
-python -m streamlit run dashboard/app.py
-# Or: make dashboard
+python -m streamlit run app/streamlit_app.py
+# Or: make app (make dashboard remains an alias)
 ```
 
 Open `http://127.0.0.1:8501`. The reference-inspired navy dashboard has compact
@@ -63,6 +92,11 @@ URL/Email tabs, an input panel, a segmented circular risk meter, diverging featu
 contributions, and the three strongest reasons. Email results show escaped,
 highlighted cleaned text. There are no decorative headers, footers, fabricated
 activity feeds or sample metrics. Narrow screens stack the panels.
+
+Dashboard code lives in `app/`: `streamlit_app.py` is the entry point, `client.py`
+handles HTTP, and `visuals.py`/`style.css` handle presentation. The theme stays at
+repository-root `.streamlit/config.toml` because Streamlit reads project settings
+from the directory where it is launched. Run both servers from the repository root.
 
 The API status indicator and Refresh button check model availability. Analysis
 buttons are disabled when their model is unavailable. Forms handle empty input,
@@ -76,6 +110,14 @@ server's environment, not through an untrusted browser input.
 The online pilot remains experimental. Its result panel says so, and fallback
 results identify their offline model. A legitimate label is a model estimate,
 not a guarantee that a link or email is safe.
+
+For regression checks, install `.[dev]`, then run `python -m pytest -W error` and
+the Ruff commands above. Starlette is explicitly constrained to `>=0.49.1,<1`
+with `anyio>=4.8,<4.15` to retain the specified HTTPX TestClient stack without
+introducing HTTPX2 or suppressing deprecation warnings. These constrain existing
+FastAPI transitive dependencies rather than add new runtime capabilities.
+Dependency ranges are compatibility bounds,
+not an exact environment lock; model metadata records training-library versions.
 
 ## Run the API (Stage 5)
 
@@ -194,8 +236,10 @@ These probes diagnose the shortcut, not current page safety or production genera
 Historical labels, scheme omission and source bias remain limitations.
 
 The old model/input are preserved under `artifacts/phiusiil_baseline/`. Superseded PhiUSIIL CSVs were removed during cleanup;
-source hashes remain in the baseline provenance. Run `python -m phishlens.models.audit_url` for the saved
-candidate/baseline comparison; see [MODEL_CARD](docs/MODEL_CARD.md) for full metrics.
+source hashes remain in the baseline provenance. The optional historical audit
+requires those local baseline artifacts; they are excluded from a fresh checkout.
+With them available, run `python -m phishlens.models.audit_url --candidate artifacts/url_offline.joblib`
+for the saved-model comparison. See [MODEL_CARD](docs/MODEL_CARD.md) for full metrics.
 
 ## Email model (Stage 3)
 

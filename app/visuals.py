@@ -70,6 +70,7 @@ def risk_chart(result: PredictionResponse | None) -> go.Figure:
 
 
 def feature_chart(result: PredictionResponse) -> go.Figure:
+    """Compare signed model contributions while keeping the strongest signals readable."""
     features = sorted(result.top_features, key=lambda item: abs(item.contribution))[-8:]
     fig = go.Figure(
         go.Bar(

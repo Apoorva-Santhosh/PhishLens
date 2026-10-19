@@ -13,6 +13,7 @@ class APIError(Exception):
 
 
 def api_url() -> str:
+    """Read the trusted server-side API destination without accepting browser overrides."""
     return os.environ.get("PHISHLENS_API_URL", "http://127.0.0.1:8000").rstrip("/")
 
 
@@ -48,6 +49,7 @@ def request(path: str, payload: dict | None = None) -> dict:
 
 
 def health() -> HealthResponse:
+    """Validate availability metadata before enabling analysis controls."""
     try:
         return HealthResponse.model_validate(request("/health"))
     except ValidationError:
@@ -55,6 +57,7 @@ def health() -> HealthResponse:
 
 
 def analyze(kind: str, value: str, mode: str = "offline") -> PredictionResponse:
+    """Submit one analysis and validate its model identity and explanation contract."""
     if kind not in {"url", "email"}:
         raise ValueError("Unsupported analysis kind")
     payload = {"url": value, "mode": mode} if kind == "url" else {"text": value}

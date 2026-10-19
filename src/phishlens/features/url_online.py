@@ -86,6 +86,7 @@ class OnlineSettings:
     dns_server: str = ONLINE_DNS_SERVER
 
     def __post_init__(self) -> None:
+        """Reject unusable timeouts and resolver settings before any network operation."""
         if (
             any(
                 not math.isfinite(v) or v <= 0

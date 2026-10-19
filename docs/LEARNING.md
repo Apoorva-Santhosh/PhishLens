@@ -325,7 +325,7 @@ errors exclude Pydantic's default input-value echo, and internal errors expose
 only a generic message. FastAPI TestClient context managers exercise the real
 startup/shutdown lifecycle without needing a listening server.
 
-## dashboard/ (Stage 6)
+## app/ (Stage 6)
 
 The Streamlit app is an HTTP client, not a second inference implementation.
 `client.py` submits bounded form values through HTTPX and validates responses
@@ -344,3 +344,23 @@ The theme defines the navy/cyan palette; the small stylesheet handles compact
 panels and narrow-screen stacking. Empty states show no fabricated results.
 Streamlit AppTest exercises forms and model availability; HTTP boundary tests
 cover payloads, timeouts, rate limits and malformed response schemas.
+
+## Final polish (Stage 7)
+
+Public functions and methods carry parameter/return annotations and concise
+docstrings explaining their purpose. An annotation describes the expected
+contract; Pydantic and explicit validation enforce input rules at runtime. Ruff
+checks style and imports, while regression tests check behavior. Running pytest
+with `-W error` makes dependency deprecations visible instead of hiding them.
+
+Starlette and AnyIO are existing FastAPI dependencies. Their compatibility bounds
+keep TestClient on the project's HTTPX stack and avoid deprecated AnyIO aliases;
+no warning filters or runtime monkey patches are used. Future upgrades should
+rerun strict tests together rather than upgrade those components independently.
+
+`make app` starts `app/streamlit_app.py`; `make dashboard` is a compatibility alias.
+The theme remains in root `.streamlit/config.toml`, where Streamlit discovers it
+when launched from the repository root. A clean install must work without local
+datasets or saved models: tests create their own synthetic fixtures, and missing
+artifacts produce explicit API availability errors. Synthetic training checks
+exercise reproducibility and command wiring, not detection quality on real data.

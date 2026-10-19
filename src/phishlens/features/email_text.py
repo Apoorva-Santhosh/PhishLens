@@ -16,23 +16,27 @@ EMAIL_PATTERN = re.compile(r"\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b", re.IGNORECASE)
 
 class _VisibleText(HTMLParser):
     def __init__(self) -> None:
+        """Collect only visible text; never evaluate embedded HTML or scripts."""
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
         self.hidden = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """Suppress script/style content and separate adjacent block text."""
         if tag in {"script", "style"}:
             self.hidden += 1
         if not self.hidden:
             self.parts.append(" ")
 
     def handle_endtag(self, tag: str) -> None:
+        """Resume visible text after hidden content without merging neighboring words."""
         if tag in {"script", "style"} and self.hidden:
             self.hidden -= 1
         if not self.hidden:
             self.parts.append(" ")
 
     def handle_data(self, data: str) -> None:
+        """Retain text only while outside script and style elements."""
         if not self.hidden:
             self.parts.append(data)
 

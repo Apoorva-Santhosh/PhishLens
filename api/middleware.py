@@ -26,6 +26,7 @@ class RequestGuard:
         max_clients: int = 10_000,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
+        """Bound per-process client state and request bytes before JSON parsing."""
         self.app = app
         self.limit = limit
         self.window = window
@@ -35,6 +36,7 @@ class RequestGuard:
         self.clients: OrderedDict[str, tuple[float, int]] = OrderedDict()
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """Guard HTTP requests while forwarding other ASGI events unchanged."""
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
@@ -43,6 +45,7 @@ class RequestGuard:
         status = 500
 
         async def wrapped_send(message: Message) -> None:
+            """Attach a traceable ID and prevent caching sensitive prediction results."""
             nonlocal status
             if message["type"] == "http.response.start":
                 status = message["status"]
@@ -55,6 +58,7 @@ class RequestGuard:
             await send(message)
 
         async def reject(code: int, detail: str, headers: dict[str, str] | None = None) -> None:
+            """Return guard failures with the same privacy headers as normal responses."""
             await JSONResponse({"detail": detail}, code, headers=headers)(
                 scope, receive, wrapped_send
             )
@@ -92,6 +96,7 @@ class RequestGuard:
             delivered = False
 
             async def replay() -> Message:
+                """Deliver the bounded request body once to downstream validation."""
                 nonlocal delivered
                 if delivered:
                     return await receive()

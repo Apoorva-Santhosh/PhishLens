@@ -19,6 +19,7 @@ class URLRequest(BaseModel):
     @field_validator("url")
     @classmethod
     def valid_url(cls, value: str) -> str:
+        """Reuse lexical parsing so HTTP and CLI inputs follow the same URL rules."""
         parse_url(value)
         return value
 
@@ -30,6 +31,7 @@ class EmailRequest(BaseModel):
     @field_validator("text")
     @classmethod
     def usable_text(cls, value: str) -> str:
+        """Reject text that cannot produce usable tokens before starting inference."""
         clean_text(value)
         return value
 

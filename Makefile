@@ -1,4 +1,4 @@
-.PHONY: setup train train-offline train-url train-email train-online collect-online prepare-url prepare-email test lint api dashboard
+.PHONY: setup train train-offline train-url train-email train-online collect-online prepare-url prepare-email test lint api app dashboard
 
 PYTHON ?= python
 
@@ -36,5 +36,7 @@ lint:
 api:
 	$(PYTHON) -m uvicorn api.main:app --host 127.0.0.1 --port 8000 --no-access-log --no-proxy-headers
 
-dashboard:
-	$(PYTHON) -m streamlit run dashboard/app.py
+app:
+	$(PYTHON) -m streamlit run app/streamlit_app.py
+
+dashboard: app
